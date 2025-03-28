@@ -11,6 +11,7 @@ import {
   Query,
   UnauthorizedException,
   UploadedFile,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 import { UserService } from './user.service';
@@ -35,6 +36,9 @@ import {
 import { RefreshTokenVo } from './vo/refresh-token.vo';
 import { UserListVo } from './vo/user-list.vo';
 import { FileInterceptor } from '@nestjs/platform-express';
+import * as path from 'path';
+import { storage } from 'src/my-file-storage';
+import { AuthGuard } from '@nestjs/passport';
 
 @ApiTags('用户管理模块')
 @Controller('user')
@@ -192,9 +196,34 @@ export class UserController {
     description: '用户信息和 token',
     type: LoginUserVo,
   })
+  @UseGuards(AuthGuard('local')) // 使用本地策略
   @Post('login')
-  async userLogin(@Body() loginUser: LoginUserDto) {
-    return this.loginHandler(loginUser, false);
+  async userLogin(@UserInfo() vo: LoginUserVo) {
+    vo.accessToken = this.jwtService.sign(
+      {
+        userId: vo.userInfo.id,
+        username: vo.userInfo.username,
+        email: vo.userInfo.email,
+        roles: vo.userInfo.roles,
+        permissions: vo.userInfo.permissions,
+      },
+      {
+        expiresIn:
+          this.configService.get('jwt_access_token_expires_time') || '30m',
+      },
+    );
+
+    vo.refreshToken = this.jwtService.sign(
+      {
+        userId: vo.userInfo.id,
+      },
+      {
+        expiresIn:
+          this.configService.get('jwt_refresh_token_expres_time') || '7d',
+      },
+    );
+
+    return vo;
   }
 
   @ApiQuery({
@@ -417,6 +446,18 @@ export class UserController {
   @UseInterceptors(
     FileInterceptor('file', {
       dest: 'uploads',
+      storage: storage,
+      limits: {
+        fileSize: 1024 * 1024 * 3,
+      },
+      fileFilter(req, file, callback) {
+        const extname = path.extname(file.originalname);
+        if (['.png', '.jpg', '.gif'].includes(extname)) {
+          callback(null, true);
+        } else {
+          callback(new BadRequestException('只能上传图片'), false);
+        }
+      },
     }),
   )
   uploadFile(@UploadedFile() file: Express.Multer.File) {

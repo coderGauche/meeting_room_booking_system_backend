@@ -13,6 +13,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { LoginGuard } from './login.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { PermissionGuard } from './permission.guard';
+import { MeetingRoomModule } from './meeting-room/meeting-room.module';
+import { MeetingRoom } from './meeting-room/entities/meeting-room.entity';
+import { BookingModule } from './booking/booking.module';
+import { Booking } from './booking/entities/booking.entity';
+import { StatisticModule } from './statistic/statistic.module';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -31,7 +37,7 @@ import { PermissionGuard } from './permission.guard';
           database: configService.get('mysql_server_database'),
           synchronize: true,
           logging: false,
-          entities: [User, Role, Permission],
+          entities: [User, Role, Permission,MeetingRoom,Booking],
           poolSize: 10,
           connectorPackage: 'mysql2',
           namedPlaceholders: true
@@ -52,6 +58,10 @@ import { PermissionGuard } from './permission.guard';
     UserModule,
     RedisModule,
     EmailModule,
+    MeetingRoomModule,
+    BookingModule,
+    StatisticModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [
